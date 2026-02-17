@@ -1,0 +1,21 @@
+# Secrets
+.env
+.env.*
+*.pem
+*.key
+
+# Node
+node_modules/
+dist/
+coverage/
+npm-debug.log*
+.yarn/
+.pnpm-store/
+
+# OS / Editor
+.DS_Store
+.vscode/
+.idea/
+
+# Docker volumes / local data (si alguna vez los mapeas)
+pgdata/
