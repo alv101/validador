@@ -96,3 +96,57 @@ Nest is an MIT-licensed open source project. It can grow thanks to the sponsors 
 ## License
 
 Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+
+## API users (MVP)
+
+Todos los endpoints de `users` requieren JWT con rol `ADMIN`.
+
+### 1) Login (obtener token)
+
+```bash
+curl -s -X POST http://localhost:3000/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username":"admin","password":"admin1234"}'
+```
+
+Guarda el token:
+
+```bash
+TOKEN="<accessToken_devuelto_por_login>"
+```
+
+### 2) Crear usuario (ADMIN)
+
+```bash
+curl -X POST http://localhost:3000/api/v1/users \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "conductor01",
+    "password": "Pass1234!",
+    "roles": ["DRIVER"]
+  }'
+```
+
+Si el `username` ya existe, devuelve `409 Conflict`.
+
+### 3) Listar usuarios (ADMIN)
+
+```bash
+curl -X GET http://localhost:3000/api/v1/users \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+### 4) Actualizar usuario (ADMIN)
+
+Activar/desactivar y cambiar roles:
+
+```bash
+curl -X PATCH http://localhost:3000/api/v1/users/<USER_ID> \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "active": false,
+    "roles": ["DRIVER", "ADMIN"]
+  }'
+```
