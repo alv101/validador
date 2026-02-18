@@ -1,0 +1,155 @@
+:root {
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  color: #111827;
+  background: #f3f4f6;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+a {
+  color: #1d4ed8;
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+input,
+button {
+  font: inherit;
+}
+
+button {
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 0.6rem 0.9rem;
+}
+
+.page {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+.page--centered {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.nav-inline {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.card {
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 1rem;
+  background: #ffffff;
+  width: min(100%, 420px);
+}
+
+.stack {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.text-error {
+  color: #b91c1c;
+}
+
+.scanner {
+  margin-top: 1rem;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1px solid #e5e7eb;
+  background: #111827;
+}
+
+.scanner__video {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  display: block;
+}
+
+.actions {
+  margin: 1rem 0;
+}
+
+.banner {
+  background: #fde68a;
+  color: #78350f;
+  border: 1px solid #f59e0b;
+  padding: 0.65rem 0.8rem;
+  border-radius: 10px;
+}
+
+.result {
+  border-radius: 14px;
+  padding: 1rem;
+  color: #111827;
+  border: 2px solid transparent;
+}
+
+.result__label {
+  font-size: 2rem;
+  font-weight: 800;
+  margin: 0 0 0.35rem;
+}
+
+.result--valid {
+  background: #dcfce7;
+  border-color: #22c55e;
+}
+
+.result--invalid {
+  background: #fee2e2;
+  border-color: #ef4444;
+}
+
+.result--duplicate {
+  background: #fef9c3;
+  border-color: #eab308;
+}
+
+.result--error {
+  background: #e5e7eb;
+  border-color: #9ca3af;
+}
+
+.history-list {
+  display: grid;
+  gap: 0.6rem;
+  padding: 0;
+  list-style: none;
+}
+
+.history-item {
+  display: grid;
+  gap: 0.25rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 0.7rem;
+  background: #ffffff;
+}
