@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 
-import { addHistoryEntry } from "@/features/offlineQueue/db";
 import { useAuth } from "@/features/auth/AuthContext";
 import { shouldIgnoreDuplicateRaw } from "@/features/scan/scanUtils";
 import { HttpError, apiFetch, isNetworkError } from "@/lib/apiClient";
@@ -95,17 +94,6 @@ export function ScanPage() {
   const [selectedDeviceId, setSelectedDeviceId] = useState<string | undefined>(undefined);
   const [cameraRetryNonce, setCameraRetryNonce] = useState(0);
 
-  const addHistory = useCallback(async (payload: ValidateRequest, outcome: ValidationOutcome, at: string) => {
-    const id = `${at}:${payload.locator}:${payload.serviceId}`;
-    await addHistoryEntry({
-      id,
-      locator: payload.locator,
-      serviceId: payload.serviceId,
-      outcome,
-      at,
-    });
-  }, []);
-
   const submitValidation = useCallback(
     async (payload: ValidateRequest) => {
       const idempotencyKey = createRequestId();
@@ -126,8 +114,6 @@ export function ScanPage() {
           createdAt: response.timestamps.createdAt,
           updatedAt: response.timestamps.updatedAt,
         });
-
-        await addHistory(payload, response.result, response.timestamps.updatedAt);
         return;
       } catch (error) {
         if (isNetworkError(error) || !navigator.onLine) {
@@ -137,7 +123,6 @@ export function ScanPage() {
             createdAt: now,
             updatedAt: now,
           });
-          await addHistory(payload, "OFFLINE", now);
           return;
         }
 
@@ -149,7 +134,6 @@ export function ScanPage() {
               createdAt: now,
               updatedAt: now,
             });
-            await addHistory(payload, "ERROR", now);
             logout();
             return;
           }
@@ -161,7 +145,6 @@ export function ScanPage() {
               createdAt: now,
               updatedAt: now,
             });
-            await addHistory(payload, "ERROR", now);
             return;
           }
 
@@ -172,7 +155,6 @@ export function ScanPage() {
               createdAt: now,
               updatedAt: now,
             });
-            await addHistory(payload, "ERROR", now);
             return;
           }
         }
@@ -183,10 +165,9 @@ export function ScanPage() {
           createdAt: now,
           updatedAt: now,
         });
-        await addHistory(payload, "ERROR", now);
       }
     },
-    [addHistory, logout],
+    [logout],
   );
 
   const handleRawQr = useCallback(
@@ -219,7 +200,7 @@ export function ScanPage() {
       }
 
       try {
-        await submitValidation(parsed);
+        await submitValidation({ locator: parsed.locator, serviceId: "UNSET_SERVICE" });
       } finally {
         processingRef.current = false;
       }
@@ -342,7 +323,7 @@ export function ScanPage() {
       <header className="topbar">
         <h1>Escáner QR</h1>
         <nav className="nav-inline">
-          <Link to="/history">Historial</Link>
+          <Link to="/history">Historial backend</Link>
           <Link to="/settings">Settings</Link>
         </nav>
       </header>

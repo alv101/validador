@@ -1,15 +1,26 @@
-import type { ValidateRequest } from "@/types/validations";
+type ParsedQrPayload = {
+  locator: string;
+  dni?: string;
+};
 
-export function parseQrPayload(raw: string): ValidateRequest | null {
+function isLikelySpanishDniNie(value: string): boolean {
+  const normalized = value.trim().toUpperCase();
+  return /^\d{8}[A-Z]$/.test(normalized) || /^[XYZ]\d{7}[A-Z]$/.test(normalized);
+}
+
+export function parseQrPayload(raw: string): ParsedQrPayload | null {
   const text = (raw ?? "").trim();
   if (!text) return null;
 
   // JSON format
   if (text.startsWith("{")) {
     try {
-      const obj = JSON.parse(text) as Partial<ValidateRequest>;
-      if (typeof obj.locator === "string" && typeof obj.serviceId === "string") {
-        return normalize({ locator: obj.locator, serviceId: obj.serviceId });
+      const obj = JSON.parse(text) as { locator?: unknown; dni?: unknown };
+      if (typeof obj.locator === "string") {
+        return normalize({
+          locator: obj.locator,
+          dni: typeof obj.dni === "string" ? obj.dni : undefined,
+        });
       }
     } catch {
       // fallthrough
@@ -26,15 +37,29 @@ export function parseQrPayload(raw: string): ValidateRequest | null {
   }
 
   const locator = map.get("locator");
-  const serviceId = map.get("serviceid") ?? map.get("service_id");
+  const dni = map.get("dni");
 
-  if (!locator || !serviceId) return null;
-  return normalize({ locator, serviceId });
+  if (locator) {
+    return normalize({ locator, dni });
+  }
+
+  // fallback: "LOCATOR|DNI" or "LOCATOR-DNI"
+  const splitMatch = text.match(/^([^|\-\s]+)[|\-\s]+([^|\-\s]+)$/);
+  if (splitMatch && isLikelySpanishDniNie(splitMatch[2])) {
+    return normalize({ locator: splitMatch[1], dni: splitMatch[2] });
+  }
+
+  return null;
 }
 
-function normalize(input: ValidateRequest): ValidateRequest {
-  return {
-    locator: input.locator.trim().toUpperCase(),
-    serviceId: input.serviceId.trim(),
-  };
+function normalize(input: ParsedQrPayload): ParsedQrPayload {
+  const normalizedDni = input.dni?.trim().toUpperCase();
+  return normalizedDni
+    ? {
+        locator: input.locator.trim().toUpperCase(),
+        dni: normalizedDni,
+      }
+    : {
+        locator: input.locator.trim().toUpperCase(),
+      };
 }

@@ -38,6 +38,7 @@ La PWA llama a `/api/v1/...` y Vite reenvía al backend local.
 - `/login` pública
 - `/scan` protegida
 - `/history` protegida
+- `/history/backend` protegida (compatibilidad)
 - `/settings` protegida
 - `/` redirige a `/scan`
 
@@ -45,13 +46,7 @@ La PWA llama a `/api/v1/...` y Vite reenvía al backend local.
 
 - Si no hay red al escanear, la app muestra: `SIN CONEXIÓN — NO VALIDADO`.
 - En offline no se hace validación diferida y no existe sincronización posterior.
-- El intento queda guardado en historial local con outcome `OFFLINE`.
-
-## Historial Local
-
-- Guarda los últimos 100 intentos en IndexedDB.
-- Cada entrada: `locator`, `serviceId`, `outcome`, `at`.
-- En `/history` hay filtro por outcome y buscador por locator.
+- El historial consultable es el del backend.
 
 ## Scripts
 
