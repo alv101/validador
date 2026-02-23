@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 
 import { useAuth } from "@/features/auth/AuthContext";
 import { shouldIgnoreDuplicateRaw } from "@/features/scan/scanUtils";
 import { useActiveService } from "@/features/service/ActiveServiceContext";
 import { HttpError, apiFetch, isNetworkError } from "@/lib/apiClient";
 import { parseQrPayload } from "@/lib/qr/parseQr";
+import { BrandBar } from "@/components/BrandBar";
 import type { ValidationOutcome } from "@/types/history";
 import type { ValidateLocatorRequest, ValidateRequest, ValidateResponse, ValidationReason } from "@/types/validations";
 
@@ -536,12 +537,17 @@ export function ScanPage() {
   }, [clearActiveService, hardStopScanner, navigate]);
 
   return (
-    <main className="page">
+    <main className="page scan-page">
+      <BrandBar />
       <header className="topbar">
         <h1>Escáner QR</h1>
         <nav className="nav-inline">
-          <Link to="/history">Historial backend</Link>
-          <Link to="/settings">Settings</Link>
+          <NavLink to="/history" className={({ isActive }) => (isActive ? "nav-link is-active" : "nav-link")}>
+            Historial
+          </NavLink>
+          <NavLink to="/settings" className={({ isActive }) => (isActive ? "nav-link is-active" : "nav-link")}>
+            Settings
+          </NavLink>
         </nav>
       </header>
 
@@ -556,16 +562,12 @@ export function ScanPage() {
         </section>
       ) : null}
 
-      {/* ✅ Selector solo si enumerateDevices funciona y hay más de 1 */}
-      {canEnumerate && cameraDevices.length > 1 ? (
-        <section className="actions">
-          <label>
+      <section className="actions actions--inline">
+        {/* ✅ Selector solo si enumerateDevices funciona y hay más de 1 */}
+        {canEnumerate && cameraDevices.length > 1 ? (
+          <label className="camera-control">
             Cámara
-            <select
-              value={selectedDeviceId}
-              onChange={(event) => setSelectedDeviceId(event.target.value)}
-              style={{ marginLeft: 8 }}
-            >
+            <select value={selectedDeviceId} onChange={(event) => setSelectedDeviceId(event.target.value)}>
               {cameraDevices.map((camera) => (
                 <option key={camera.deviceId} value={camera.deviceId}>
                   {camera.label}
@@ -573,8 +575,11 @@ export function ScanPage() {
               ))}
             </select>
           </label>
-        </section>
-      ) : null}
+        ) : null}
+        <button type="button" onClick={retryCamera}>
+          Activar cámara
+        </button>
+      </section>
 
       {/* ✅ Ayuda al usuario si no se puede enumerar */}
       {!canEnumerate ? (
@@ -585,28 +590,30 @@ export function ScanPage() {
 
       {cameraError ? <p className="text-error">{cameraError}</p> : null}
 
-      <section className="scanner">
-        <video ref={videoRef} className="scanner__video" muted playsInline />
-      </section>
-
-      <section className="actions">
-        <button type="button" onClick={retryCamera}>
-          Reintentar cámara
-        </button>
-      </section>
-
-      {feedback ? (
-        <section className={RESULT_CLASS[feedback.outcome]}>
-          <p className="result__label">{feedback.message}</p>
-          {feedback.outcome === "INVALID" && feedback.invalidReason ? <p>motivo: {feedback.invalidReason}</p> : null}
-          {feedback.outcome === "DUPLICATE" && feedback.duplicateRecordedAt ? (
-            <p>validado previamente: {new Date(feedback.duplicateRecordedAt).toLocaleString()}</p>
-          ) : null}
-          <p>localizador: {feedback.locator ?? "-"}</p>
-          <p>id ticket validado: {feedback.validatedTicketId ?? "-"}</p>
-          <p>número billete: {feedback.ticketNumber ?? "-"}</p>
+      <section className="scan-layout">
+        <section className="scanner">
+          <video ref={videoRef} className="scanner__video" muted playsInline />
         </section>
-      ) : null}
+
+        {feedback ? (
+          <section className={`${RESULT_CLASS[feedback.outcome]} scan-layout__result`}>
+            <p className="result__label">{feedback.message}</p>
+            {feedback.outcome === "INVALID" && feedback.invalidReason ? <p>motivo: {feedback.invalidReason}</p> : null}
+            {feedback.outcome === "DUPLICATE" && feedback.duplicateRecordedAt ? (
+              <p>validado previamente: {new Date(feedback.duplicateRecordedAt).toLocaleString()}</p>
+            ) : null}
+            <p>localizador: {feedback.locator ?? "-"}</p>
+            <p>id ticket validado: {feedback.validatedTicketId ?? "-"}</p>
+            <p>número billete: {feedback.ticketNumber ?? "-"}</p>
+          </section>
+        ) : (
+          <section className="result scan-layout__result scan-layout__result--empty">
+            <p className="result__label">Esperando escaneo</p>
+            <p>Aún no hay lecturas en esta sesión.</p>
+            <p>Cuando valides un QR, el resultado aparecerá aquí.</p>
+          </section>
+        )}
+      </section>
     </main>
   );
 }

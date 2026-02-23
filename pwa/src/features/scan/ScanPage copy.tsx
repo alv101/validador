@@ -323,7 +323,7 @@ export function ScanPage() {
       <header className="topbar">
         <h1>Escáner QR</h1>
         <nav className="nav-inline">
-          <Link to="/history">Historial backend</Link>
+          <Link to="/history">Historial</Link>
           <Link to="/settings">Settings</Link>
         </nav>
       </header>

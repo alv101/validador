@@ -1,9 +1,10 @@
-import { Link } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
 
 import { useAuth } from "@/features/auth/AuthContext";
 import { apiFetch } from "@/lib/apiClient";
 import { getDeviceId } from "@/lib/deviceId";
+import { BrandBar } from "@/components/BrandBar";
 
 export function SettingsPage() {
   const { logout, me } = useAuth();
@@ -81,12 +82,21 @@ export function SettingsPage() {
 
   return (
     <main className="page">
+      <BrandBar />
       <header className="topbar">
         <h1>Settings</h1>
         <nav className="nav-inline">
-          <Link to="/scan">Escanear</Link>
-          <Link to="/history">Historial backend</Link>
-          {isAdmin ? <Link to="/admin/live">Monitor vivo</Link> : null}
+          <NavLink to="/scan" className={({ isActive }) => (isActive ? "nav-link is-active" : "nav-link")}>
+            Escanear
+          </NavLink>
+          <NavLink to="/history" className={({ isActive }) => (isActive ? "nav-link is-active" : "nav-link")}>
+            Historial
+          </NavLink>
+          {isAdmin ? (
+            <NavLink to="/admin/live" className={({ isActive }) => (isActive ? "nav-link is-active" : "nav-link")}>
+              Monitor vivo
+            </NavLink>
+          ) : null}
         </nav>
       </header>
 

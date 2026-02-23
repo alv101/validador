@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 
 import { useActiveService } from "@/features/service/ActiveServiceContext";
 import { listBuses, listDepartures, listItineraries } from "@/features/service/catalog/serviceCatalog";
 import { toYYYYMMDD, toYYYYMMDDWithHyphen } from "@/features/service/dateUtils";
 import type { BusOption, DepartureOption, RouteOption } from "@/types/service";
+import { BrandBar } from "@/components/BrandBar";
 
 type CatalogState = {
   itineraries: RouteOption[];
@@ -204,12 +205,19 @@ export function ServiceSelectPage() {
 
   return (
     <main className="page">
+      <BrandBar />
       <header className="topbar">
         <h1>Seleccionar servicio</h1>
         <nav className="nav-inline">
-          <Link to="/scan">Escanear</Link>
-          <Link to="/history">Historial backend</Link>
-          <Link to="/settings">Settings</Link>
+          <NavLink to="/scan" className={({ isActive }) => (isActive ? "nav-link is-active" : "nav-link")}>
+            Escanear
+          </NavLink>
+          <NavLink to="/history" className={({ isActive }) => (isActive ? "nav-link is-active" : "nav-link")}>
+            Historial
+          </NavLink>
+          <NavLink to="/settings" className={({ isActive }) => (isActive ? "nav-link is-active" : "nav-link")}>
+            Settings
+          </NavLink>
         </nav>
       </header>
 

@@ -3,6 +3,7 @@ import { Navigate } from "react-router-dom";
 
 import { HttpError } from "@/lib/apiClient";
 import { useAuth } from "@/features/auth/AuthContext";
+import { BrandBar } from "@/components/BrandBar";
 
 export function LoginPage() {
   const { isAuthenticated, login } = useAuth();
@@ -36,6 +37,7 @@ export function LoginPage() {
 
   return (
     <main className="page page--centered">
+      <BrandBar />
       <section className="card">
         <h1>Iniciar sesión</h1>
         <form className="stack" onSubmit={handleSubmit}>

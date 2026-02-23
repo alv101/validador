@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 
 import { apiFetch } from "@/lib/apiClient";
 import { toYYYYMMDDWithHyphen } from "@/features/service/dateUtils";
 import type { BackendHistoryResponse } from "@/types/backendHistory";
 import type { ValidationResult } from "@/types/validations";
+import { BrandBar } from "@/components/BrandBar";
 
 type OutcomeFilter = "ALL" | ValidationResult;
 
@@ -63,15 +64,20 @@ export function BackendHistoryPage() {
 
   return (
     <main className="page">
+      <BrandBar />
       <header className="topbar">
-        <h1>Historial backend</h1>
+        <h1>Historial</h1>
         <nav className="nav-inline">
-          <Link to="/scan">Escanear</Link>
-          <Link to="/settings">Settings</Link>
+          <NavLink to="/scan" className={({ isActive }) => (isActive ? "nav-link is-active" : "nav-link")}>
+            Escanear
+          </NavLink>
+          <NavLink to="/settings" className={({ isActive }) => (isActive ? "nav-link is-active" : "nav-link")}>
+            Settings
+          </NavLink>
         </nav>
       </header>
 
-      <section className="actions stack" style={{ maxWidth: 360 }}>
+      <section className="actions history-filters">
         <input
           placeholder="Buscar por locator"
           value={query}
@@ -90,38 +96,43 @@ export function BackendHistoryPage() {
           Hasta
           <input type="date" value={dateTo} onChange={(event) => setDateTo(event.target.value)} />
         </label>
-          <select value={filter} onChange={(event) => setFilter(event.target.value as OutcomeFilter)}>
-          <option value="ALL">Todos</option>
-          <option value="VALID">VALID</option>
-          <option value="INVALID">INVALID</option>
-          <option value="DUPLICATE">DUPLICATE</option>
-          <option value="ERROR">ERROR</option>
-        </select>
-        <label className="stack">
-          Tamaño página
-          <select
-            value={pageSize}
-            onChange={(event) => {
+        <div className="history-filters__footer">
+          <label className="stack">
+            Resultado
+            <select value={filter} onChange={(event) => setFilter(event.target.value as OutcomeFilter)}>
+              <option value="ALL">Todos</option>
+              <option value="VALID">VALID</option>
+              <option value="INVALID">INVALID</option>
+              <option value="DUPLICATE">DUPLICATE</option>
+              <option value="ERROR">ERROR</option>
+            </select>
+          </label>
+          <label className="stack">
+            Lin/Pág
+            <select
+              value={pageSize}
+              onChange={(event) => {
+                setPage(1);
+                setPageSize(Number(event.target.value));
+              }}
+            >
+              <option value={20}>20</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+            </select>
+          </label>
+          <button
+            type="button"
+            onClick={() => {
               setPage(1);
-              setPageSize(Number(event.target.value));
+              setAppliedQuery(query);
+              setAppliedServiceIdQuery(serviceIdQuery);
+              setAppliedFilter(filter);
             }}
           >
-            <option value={20}>20</option>
-            <option value={50}>50</option>
-            <option value={100}>100</option>
-          </select>
-        </label>
-        <button
-          type="button"
-          onClick={() => {
-            setPage(1);
-            setAppliedQuery(query);
-            setAppliedServiceIdQuery(serviceIdQuery);
-            setAppliedFilter(filter);
-          }}
-        >
-          Aplicar filtros
-        </button>
+            Aplicar
+          </button>
+        </div>
       </section>
 
       {loading ? <p>Cargando historial backend...</p> : null}

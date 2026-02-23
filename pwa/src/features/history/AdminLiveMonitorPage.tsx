@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 
 import { apiFetch } from "@/lib/apiClient";
+import { BrandBar } from "@/components/BrandBar";
 
 const REFRESH_MS = 2000;
 
@@ -46,12 +47,19 @@ export function AdminLiveMonitorPage() {
 
   return (
     <main className="page" style={{ maxWidth: "min(98vw, 1800px)" }}>
+      <BrandBar />
       <header className="topbar">
         <h1>Monitor validaciones (vivo)</h1>
         <nav className="nav-inline">
-          <Link to="/scan">Escanear</Link>
-          <Link to="/history">Historial</Link>
-          <Link to="/settings">Settings</Link>
+          <NavLink to="/scan" className={({ isActive }) => (isActive ? "nav-link is-active" : "nav-link")}>
+            Escanear
+          </NavLink>
+          <NavLink to="/history" className={({ isActive }) => (isActive ? "nav-link is-active" : "nav-link")}>
+            Historial
+          </NavLink>
+          <NavLink to="/settings" className={({ isActive }) => (isActive ? "nav-link is-active" : "nav-link")}>
+            Settings
+          </NavLink>
         </nav>
       </header>
 
