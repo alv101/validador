@@ -51,18 +51,24 @@ SELECT TOP 0
   CAST(NULL AS VARCHAR(32)) AS dni,
   CAST(NULL AS VARCHAR(128)) AS ref
  */
-DECLARE @p1 INT, @p2 INT;
+DECLARE @p1 INT, @p2 INT, @p3 INT;
 DECLARE @svcItinerary VARCHAR(64);
 DECLARE @svcDate VARCHAR(8);
 DECLARE @svcTime VARCHAR(5);
+DECLARE @svcService VARCHAR(64);
 
 
 SET @p1 = CHARINDEX('_', @serviceId);
 SET @p2 = CHARINDEX('_', @serviceId, @p1 + 1);
+SET @p3 = CHARINDEX('_', @serviceId, @p2 + 1);
 
 SET @svcItinerary = CASE WHEN @p1 > 0 THEN LEFT(@serviceId, @p1 - 1) ELSE NULL END;
 SET @svcDate = CASE WHEN @p1 > 0 AND @p2 > @p1 THEN SUBSTRING(@serviceId, @p1 + 1, @p2 - @p1 - 1) ELSE NULL END;
 SET @svcTime = CASE WHEN @p2 > 0 THEN SUBSTRING(@serviceId, @p2 + 1, 5) ELSE NULL END;
+SET @svcService = CASE
+  WHEN @p2 > 0 AND @p3 > @p2 THEN SUBSTRING(@serviceId, @p3 + 1, LEN(@serviceId) - @p3)
+  ELSE NULL
+END;
 
 SELECT
   ROW_NUMBER() OVER (ORDER BY b.idbillete) AS sequence,
@@ -75,7 +81,8 @@ WHERE b.buscador = @locator
   AND b.anulado = 'N'
   AND (@svcDate IS NULL OR CONVERT(VARCHAR(8), b.fechaservicio, 112) = @svcDate)
   AND (@svcItinerary IS NULL OR CAST(b.itinerario AS VARCHAR(64)) = @svcItinerary)
-  AND (@svcTime IS NULL OR LEFT(CONVERT(VARCHAR(8), b.horaservicio, 108), 5) = @svcTime)
+  --AND (@svcTime IS NULL OR LEFT(CONVERT(VARCHAR(8), b.horaservicio, 108), 5) = @svcTime)
+  AND (@svcService IS NULL OR CAST(b.servicio AS VARCHAR(64)) = @svcService)
 ORDER BY b.idbillete ASC;
 
 

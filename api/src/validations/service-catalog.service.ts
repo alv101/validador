@@ -61,7 +61,7 @@ SELECT TOP 0
   CAST(NULL AS VARCHAR(10)) AS date,
   CAST(NULL AS VARCHAR(5)) AS time,
   CAST(NULL AS VARCHAR(5)) AS timeLabel
- */
+ 
 SELECT DISTINCT
    CAST(d.itinerario AS VARCHAR(64)) + '_' + CONVERT(VARCHAR(8), d.fecha, 112) + '_' +
     LEFT(CONVERT(VARCHAR(8), d.hora, 108), 5) AS departureId,
@@ -77,6 +77,39 @@ FROM [192.168.33.15\\PESADB].[SAE_TAQUILLA].[dbo].[PS_WEBORIGENDESTINO] d
   AND CAST(CONVERT(VARCHAR(10), d.fecha, 120) + ' ' + CONVERT(VARCHAR(8), d.hora, 108) AS DATETIME)
       > DATEADD(MINUTE, -15, GETDATE())
 ORDER BY time ASC
+*/
+
+WITH base AS (
+    SELECT
+        d.servicio,
+        d.itinerario,
+        d.fecha,
+        d.hora,
+        ROW_NUMBER() OVER (
+            PARTITION BY d.servicio
+            ORDER BY d.hora ASC
+        ) AS rn
+    FROM [192.168.33.15\\PESADB].[SAE_TAQUILLA].[dbo].[PS_WEBORIGENDESTINO] d
+    WHERE
+        d.tipo = 'Web'
+        AND d.itinerario =  @itineraryId
+        -- filtro por fecha SIN convertir:
+        AND d.fecha = @dateYYYYMMDD
+)
+SELECT
+    servicio,
+    CAST(itinerario AS varchar(64)) + '_' + CONVERT(char(8), fecha, 112) + '_' + LEFT(CONVERT(char(8), hora, 108), 5) + '_' + CAST(servicio AS varchar(64)) AS departureId,
+    CAST(itinerario AS varchar(64)) AS itineraryId,
+    CONVERT(char(10), fecha, 120) AS [date],
+    LEFT(CONVERT(char(8), hora, 108), 5) AS [time],
+    LEFT(CONVERT(char(8), hora, 108), 5) AS timeLabel
+FROM base
+WHERE rn = 1
+AND 
+            CAST(fecha AS datetime) + CAST(hora AS datetime)
+         > DATEADD(MINUTE, -15, GETDATE())
+ORDER BY [time];
+
 
 `;
 
