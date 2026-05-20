@@ -6,6 +6,8 @@ import { apiFetch } from "@/lib/apiClient";
 import { getDeviceId } from "@/lib/deviceId";
 import { BrandBar } from "@/components/BrandBar";
 
+const RESET_CONFIRMATION_TEXT = "RESET VALIDATIONS";
+
 export function SettingsPage() {
   const { logout, me } = useAuth();
   const [isResetting, setIsResetting] = useState(false);
@@ -16,6 +18,7 @@ export function SettingsPage() {
     requiresAdminKey: boolean;
     canExecuteFromUi: boolean;
   } | null>(null);
+  const [resetConfirmation, setResetConfirmation] = useState("");
 
   const isAdmin = useMemo(() => {
     const roles = [...(me?.roles ?? []), ...(me?.user?.roles ?? [])];
@@ -51,7 +54,7 @@ export function SettingsPage() {
 
   const handleResetValidationData = async () => {
     const confirmed = window.confirm(
-      "This will delete validation data (history, consumptions, idempotency, locator tickets). Continue?",
+      "Esto eliminará historial, consumos, idempotencia y locator tickets. ¿Seguro que quieres continuar?",
     );
     if (!confirmed) return;
 
@@ -73,12 +76,15 @@ export function SettingsPage() {
       setResetMessage(
         `Deleted: validations=${response.deleted.validations}, consumptions=${response.deleted.validatedTicketConsumptions}, idempotency=${response.deleted.validationIdempotency}, locatorTickets=${response.deleted.locatorTickets}`,
       );
+      setResetConfirmation("");
     } catch (error) {
       setResetError(error instanceof Error ? error.message : "Could not reset validation data.");
     } finally {
       setIsResetting(false);
     }
   };
+
+  const resetPhraseOk = resetConfirmation.trim().toUpperCase() === RESET_CONFIRMATION_TEXT;
 
   return (
     <main className="page">
@@ -109,7 +115,19 @@ export function SettingsPage() {
         </button>
         {isAdmin && resetStatus?.enabled && resetStatus.canExecuteFromUi ? (
           <>
-            <button type="button" onClick={() => void handleResetValidationData()} disabled={isResetting}>
+            <p>
+              Acción sensible. Para habilitar el borrado escribe <strong>{RESET_CONFIRMATION_TEXT}</strong>.
+            </p>
+            <input
+              value={resetConfirmation}
+              onChange={(event) => setResetConfirmation(event.target.value)}
+              placeholder={RESET_CONFIRMATION_TEXT}
+            />
+            <button
+              type="button"
+              onClick={() => void handleResetValidationData()}
+              disabled={isResetting || !resetPhraseOk}
+            >
               {isResetting ? "Resetting..." : "Reset validation tables"}
             </button>
             {resetMessage ? <p>{resetMessage}</p> : null}
@@ -117,7 +135,7 @@ export function SettingsPage() {
           </>
         ) : null}
         {isAdmin && resetStatus && (!resetStatus.enabled || !resetStatus.canExecuteFromUi) ? (
-          <p>Reset de validaciones deshabilitado en este entorno.</p>
+          <p>Reset de validaciones deshabilitado en UI. Si hace falta, ejecútalo solo desde backend con control adicional.</p>
         ) : null}
       </section>
     </main>

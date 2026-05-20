@@ -6,12 +6,33 @@ import { BrandBar } from "@/components/BrandBar";
 
 const REFRESH_MS = 2000;
 
+type ValidationSnapshotRow = {
+  id?: number;
+  locator?: string | null;
+  service_id?: string | null;
+  result?: string | null;
+  reason?: string | null;
+  ref?: string | null;
+  created_at?: string | null;
+};
+
+type ConsumptionSnapshotRow = {
+  id?: number;
+  ticket_key?: string | null;
+  locator?: string | null;
+  service_id?: string | null;
+  validated_username?: string | null;
+  validated_roles?: string | null;
+  created_at?: string | null;
+};
+
 export function AdminLiveMonitorPage() {
   const [snapshot, setSnapshot] = useState<{
     limit: number;
+    sensitiveDataMasked: boolean;
     tables: {
-      validations: Array<Record<string, unknown>>;
-      validated_ticket_consumptions: Array<Record<string, unknown>>;
+      validations: ValidationSnapshotRow[];
+      validated_ticket_consumptions: ConsumptionSnapshotRow[];
     };
   } | null>(null);
   const [loading, setLoading] = useState(true);
@@ -22,9 +43,10 @@ export function AdminLiveMonitorPage() {
     try {
       const data = await apiFetch<{
         limit: number;
+        sensitiveDataMasked: boolean;
         tables: {
-          validations: Array<Record<string, unknown>>;
-          validated_ticket_consumptions: Array<Record<string, unknown>>;
+          validations: ValidationSnapshotRow[];
+          validated_ticket_consumptions: ConsumptionSnapshotRow[];
         };
       }>("/validations/admin/tables?limit=50", { method: "GET" });
       setSnapshot(data);
@@ -63,10 +85,11 @@ export function AdminLiveMonitorPage() {
         </nav>
       </header>
 
-      <p>Tablas Postgres de validaciones (snapshot en vivo).</p>
+      <p>Snapshot operativo de validaciones para soporte.</p>
       <p>Límite por tabla: {snapshot?.limit ?? 50}</p>
       <p>Auto refresh: cada {REFRESH_MS / 1000}s</p>
       <p>Última actualización: {lastRefreshAt ? new Date(lastRefreshAt).toLocaleTimeString() : "-"}</p>
+      {snapshot?.sensitiveDataMasked ? <p>Los identificadores sensibles se muestran enmascarados.</p> : null}
 
       {loading ? <p>Cargando monitor en vivo...</p> : null}
       {error ? <p className="text-error">{error}</p> : null}
@@ -124,8 +147,8 @@ export function AdminLiveMonitorPage() {
                     <th style={{ textAlign: "left", borderBottom: "1px solid #ddd", padding: "6px", whiteSpace: "nowrap" }}>ticket_key</th>
                     <th style={{ textAlign: "left", borderBottom: "1px solid #ddd", padding: "6px", whiteSpace: "nowrap" }}>locator</th>
                     <th style={{ textAlign: "left", borderBottom: "1px solid #ddd", padding: "6px", whiteSpace: "nowrap" }}>service_id</th>
-                    <th style={{ textAlign: "left", borderBottom: "1px solid #ddd", padding: "6px", whiteSpace: "nowrap" }}>validated_by</th>
-                    <th style={{ textAlign: "left", borderBottom: "1px solid #ddd", padding: "6px", whiteSpace: "nowrap" }}>validated_dni</th>
+                    <th style={{ textAlign: "left", borderBottom: "1px solid #ddd", padding: "6px", whiteSpace: "nowrap" }}>validated_username</th>
+                    <th style={{ textAlign: "left", borderBottom: "1px solid #ddd", padding: "6px", whiteSpace: "nowrap" }}>validated_roles</th>
                     <th style={{ textAlign: "left", borderBottom: "1px solid #ddd", padding: "6px", whiteSpace: "nowrap" }}>created_at</th>
                   </tr>
                 </thead>
@@ -136,8 +159,8 @@ export function AdminLiveMonitorPage() {
                       <td style={{ borderBottom: "1px solid #eee", padding: "6px", whiteSpace: "nowrap" }}>{String(row.ticket_key ?? "-")}</td>
                       <td style={{ borderBottom: "1px solid #eee", padding: "6px", whiteSpace: "nowrap" }}>{String(row.locator ?? "-")}</td>
                       <td style={{ borderBottom: "1px solid #eee", padding: "6px", whiteSpace: "nowrap" }}>{String(row.service_id ?? "-")}</td>
-                      <td style={{ borderBottom: "1px solid #eee", padding: "6px", whiteSpace: "nowrap" }}>{String(row.validated_by ?? "-")}</td>
-                      <td style={{ borderBottom: "1px solid #eee", padding: "6px", whiteSpace: "nowrap" }}>{String(row.validated_dni ?? "-")}</td>
+                      <td style={{ borderBottom: "1px solid #eee", padding: "6px", whiteSpace: "nowrap" }}>{String(row.validated_username ?? "-")}</td>
+                      <td style={{ borderBottom: "1px solid #eee", padding: "6px", whiteSpace: "nowrap" }}>{String(row.validated_roles ?? "-")}</td>
                       <td style={{ borderBottom: "1px solid #eee", padding: "6px", whiteSpace: "nowrap" }}>
                         {row.created_at ? new Date(String(row.created_at)).toLocaleString() : "-"}
                       </td>

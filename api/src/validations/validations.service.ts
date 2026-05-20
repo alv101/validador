@@ -191,10 +191,11 @@ export class ValidationsService {
     const enabled = (process.env.VALIDATIONS_RESET_ENABLED ?? '').toLowerCase() === 'true';
     const isProduction = (process.env.NODE_ENV ?? '').toLowerCase() === 'production';
     const allowInProduction = (process.env.ALLOW_VALIDATIONS_RESET_IN_PROD ?? '').toLowerCase() === 'true';
+    const uiEnabled = (process.env.VALIDATIONS_RESET_UI_ENABLED ?? '').toLowerCase() === 'true';
     const requiresAdminKey = isProduction;
 
     const effectiveEnabled = enabled && (!isProduction || allowInProduction);
-    const canExecuteFromUi = effectiveEnabled && !requiresAdminKey;
+    const canExecuteFromUi = effectiveEnabled && uiEnabled && !requiresAdminKey;
 
     return {
       enabled: effectiveEnabled,
@@ -206,7 +207,7 @@ export class ValidationsService {
   async getValidationTablesSnapshot(limitRaw?: number) {
     const limit = this.normalizeAdminTablesLimit(limitRaw);
 
-    const [validations, consumptions, idempotency, locatorTickets] = await Promise.all([
+    const [validations, consumptions] = await Promise.all([
       this.db.query<RawValidationTableRow>(
         `SELECT id, locator, service_id, result, reason, ref, created_at, updated_at
          FROM validations
@@ -215,22 +216,8 @@ export class ValidationsService {
         [limit],
       ),
       this.db.query<RawConsumptionTableRow>(
-        `SELECT id, ticket_key, locator, service_id, validated_by, validated_username, validated_roles, validated_dni, created_at
+        `SELECT id, ticket_key, locator, service_id, validated_username, validated_roles, created_at
          FROM validated_ticket_consumptions
-         ORDER BY id DESC
-         LIMIT $1`,
-        [limit],
-      ),
-      this.db.query<RawIdempotencyTableRow>(
-        `SELECT id, idempotency_key, endpoint, request_hash, response_json, created_at
-         FROM validation_idempotency
-         ORDER BY id DESC
-         LIMIT $1`,
-        [limit],
-      ),
-      this.db.query<RawLocatorTicketRow>(
-        `SELECT id, locator, dni, service_id, sequence, validated_at, validated_by, validated_dni, created_at, updated_at
-         FROM locator_tickets
          ORDER BY id DESC
          LIMIT $1`,
         [limit],
@@ -239,25 +226,26 @@ export class ValidationsService {
 
     return {
       limit,
+      sensitiveDataMasked: true,
       tables: {
         validations: validations.rows.map((row) => ({
-          ...row,
+          id: row.id,
+          locator: this.maskOperationalValue(row.locator),
+          service_id: this.maskOperationalValue(row.service_id),
+          result: row.result,
+          reason: row.reason,
+          ref: this.maskOperationalValue(row.ref),
           created_at: row.created_at.toISOString(),
           updated_at: row.updated_at.toISOString(),
         })),
         validated_ticket_consumptions: consumptions.rows.map((row) => ({
-          ...row,
+          id: row.id,
+          ticket_key: this.maskOperationalValue(row.ticket_key),
+          locator: this.maskOperationalValue(row.locator),
+          service_id: this.maskOperationalValue(row.service_id),
+          validated_username: row.validated_username,
+          validated_roles: row.validated_roles,
           created_at: row.created_at.toISOString(),
-        })),
-        validation_idempotency: idempotency.rows.map((row) => ({
-          ...row,
-          created_at: row.created_at.toISOString(),
-        })),
-        locator_tickets: locatorTickets.rows.map((row) => ({
-          ...row,
-          validated_at: row.validated_at ? row.validated_at.toISOString() : null,
-          created_at: row.created_at.toISOString(),
-          updated_at: row.updated_at.toISOString(),
         })),
       },
     };
@@ -525,6 +513,15 @@ export class ValidationsService {
     if (safe < 1) return 1;
     if (safe > 300) return 300;
     return safe;
+  }
+
+  private maskOperationalValue(value: string | null | undefined): string | null {
+    if (value === null || value === undefined) return null;
+    const normalized = value.trim();
+    if (!normalized) return null;
+    if (normalized.length <= 4) return `${normalized[0]}***`;
+    if (normalized.length <= 8) return `${normalized.slice(0, 2)}***${normalized.slice(-1)}`;
+    return `${normalized.slice(0, 3)}***${normalized.slice(-3)}`;
   }
 
   private parseISODateStart(value: string): Date {

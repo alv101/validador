@@ -1,34 +1,14 @@
 import { Body, Controller, Get, Headers, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { Throttle, minutes } from '@nestjs/throttler';
 import { JwtAuthGuard } from '../auth/jwt.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { ValidationsService } from './validations.service';
-
-type ValidateBody = {
-  locator: string;
-  serviceId: string;
-};
-
-type ValidationHistoryQuery = {
-  page?: string;
-  pageSize?: string;
-  dateFrom?: string;
-  dateTo?: string;
-  locator?: string;
-  serviceId?: string;
-  result?: string;
-};
-
-type AdminTablesQuery = {
-  limit?: string;
-};
-
-type ValidateLocatorBody = {
-  locator: string;
-  dni: string;
-  serviceId?: string;
-};
+import { AdminTablesQueryDto } from './dto/admin-tables-query.dto';
+import { HistoryQueryDto } from './dto/history-query.dto';
+import { ValidateLocatorDto } from './dto/validate-locator.dto';
+import { ValidateDto } from './dto/validate.dto';
 
 type JwtUser = {
   userId?: string;
@@ -42,16 +22,17 @@ type JwtUser = {
 export class ValidationsController {
   constructor(private readonly validationsService: ValidationsService) {}
 
+  @Throttle({ default: { limit: 120, ttl: minutes(1) } })
   @Post('validate')
-  validate(@Body() body: ValidateBody) {
+  validate(@Body() body: ValidateDto) {
     return this.validationsService.validate(body);
   }
 
   @Get('validations/history')
-  listHistory(@Query() query: ValidationHistoryQuery, @CurrentUser() user: JwtUser) {
+  listHistory(@Query() query: HistoryQueryDto, @CurrentUser() user: JwtUser) {
     return this.validationsService.listValidations({
-      page: query.page ? Number(query.page) : undefined,
-      pageSize: query.pageSize ? Number(query.pageSize) : undefined,
+      page: query.page,
+      pageSize: query.pageSize,
       dateFrom: query.dateFrom,
       dateTo: query.dateTo,
       locator: query.locator,
@@ -62,9 +43,10 @@ export class ValidationsController {
     });
   }
 
+  @Throttle({ default: { limit: 180, ttl: minutes(1) } })
   @Post('validate-locator')
   validateLocator(
-    @Body() body: ValidateLocatorBody,
+    @Body() body: ValidateLocatorDto,
     @Headers('idempotency-key') idempotencyKey: string | undefined,
     @CurrentUser() user: JwtUser,
   ) {
@@ -84,8 +66,8 @@ export class ValidationsController {
 
   @Roles('ADMIN')
   @Get('validations/admin/tables')
-  listValidationTables(@Query() query: AdminTablesQuery) {
-    return this.validationsService.getValidationTablesSnapshot(query.limit ? Number(query.limit) : undefined);
+  listValidationTables(@Query() query: AdminTablesQueryDto) {
+    return this.validationsService.getValidationTablesSnapshot(query.limit);
   }
 
   @Roles('ADMIN')

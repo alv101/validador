@@ -10,19 +10,18 @@ type DbUserRow = {
   active: boolean;
 };
 
+type JwtPayload = {
+  sub?: string;
+  username?: string;
+  roles?: string[];
+};
+
 @Injectable()
 export class AuthService {
   constructor(private readonly db: DbService, private readonly jwt: JwtService) {}
 
   async login(username: string, password: string) {
-    const { rows } = await this.db.query<DbUserRow>(
-      `SELECT id, username, password_hash, active
-       FROM users
-       WHERE username = $1`,
-      [username],
-    );
-
-    const user = rows[0];
+    const user = await this.findUserByUsername(username);
     if (!user || !user.active) throw new UnauthorizedException('Invalid credentials');
 
     const ok = await argon2.verify(user.password_hash, password);
@@ -41,13 +40,47 @@ export class AuthService {
     return { accessToken };
   }
 
-  async validateJwtPayload(payload: any) {
-    // Aquí podrías revalidar en BD si el usuario sigue activo
+  async validateJwtPayload(payload: JwtPayload) {
+    const userId = typeof payload?.sub === 'string' ? payload.sub.trim() : '';
+    if (!userId) {
+      throw new UnauthorizedException('Invalid token');
+    }
+
+    const user = await this.findActiveUserById(userId);
+    if (!user) {
+      throw new UnauthorizedException('User is no longer active');
+    }
+
+    const roles = await this.getUserRoles(user.id);
+
     return {
-      userId: payload.sub,
-      username: payload.username,
-      roles: payload.roles ?? [],
+      userId: user.id,
+      username: user.username,
+      roles,
     };
+  }
+
+  private async findUserByUsername(username: string): Promise<DbUserRow | null> {
+    const { rows } = await this.db.query<DbUserRow>(
+      `SELECT id, username, password_hash, active
+       FROM users
+       WHERE username = $1`,
+      [username],
+    );
+
+    return rows[0] ?? null;
+  }
+
+  private async findActiveUserById(userId: string): Promise<DbUserRow | null> {
+    const { rows } = await this.db.query<DbUserRow>(
+      `SELECT id, username, password_hash, active
+       FROM users
+       WHERE id = $1
+         AND active = true`,
+      [userId],
+    );
+
+    return rows[0] ?? null;
   }
 
   private async getUserRoles(userId: string): Promise<string[]> {
