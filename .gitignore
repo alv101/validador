@@ -11,6 +11,11 @@ coverage/
 npm-debug.log*
 .yarn/
 .pnpm-store/
+*.tsbuildinfo
+
+# Python
+__pycache__/
+*.pyc
 
 # OS / Editor
 .DS_Store

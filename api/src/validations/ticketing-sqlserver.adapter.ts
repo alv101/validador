@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { TicketingSqlServerService } from './ticketing-sqlserver.service';
 import { TicketingAdapter, TicketingCheckResult, TicketingLocatorCandidate } from './ticketing.adapter';
 
@@ -76,13 +76,29 @@ SELECT
   UPPER(REPLACE(@dni, ' ', '')) AS dni,
   CAST(b.numero AS VARCHAR(128)) AS ref
 FROM [192.168.33.15\\PESADB].[SAE_TAQUILLA].[dbo].[PS_BILLETES] b
-WHERE b.buscador = @locator
+WHERE UPPER(LTRIM(RTRIM(CAST(b.buscador AS VARCHAR(64))))) = UPPER(LTRIM(RTRIM(@locator)))
   AND ISNULL(b.idtransaccion, '') <> ''
   AND b.anulado = 'N'
   AND (@svcDate IS NULL OR CONVERT(VARCHAR(8), b.fechaservicio, 112) = @svcDate)
-  AND (@svcItinerary IS NULL OR CAST(b.itinerario AS VARCHAR(64)) = @svcItinerary)
+  AND (
+    @svcItinerary IS NULL
+    OR CAST(b.itinerario AS VARCHAR(64)) = @svcItinerary
+    OR (
+      PATINDEX('%[^0-9]%', CAST(b.itinerario AS VARCHAR(64))) = 0
+      AND PATINDEX('%[^0-9]%', @svcItinerary) = 0
+      AND CAST(CAST(b.itinerario AS VARCHAR(64)) AS BIGINT) = CAST(@svcItinerary AS BIGINT)
+    )
+  )
   --AND (@svcTime IS NULL OR LEFT(CONVERT(VARCHAR(8), b.horaservicio, 108), 5) = @svcTime)
-  AND (@svcService IS NULL OR CAST(b.servicio AS VARCHAR(64)) = @svcService)
+  AND (
+    @svcService IS NULL
+    OR CAST(b.id_servicio AS VARCHAR(64)) = @svcService
+    OR (
+      PATINDEX('%[^0-9]%', CAST(b.id_servicio AS VARCHAR(64))) = 0
+      AND PATINDEX('%[^0-9]%', @svcService) = 0
+      AND CAST(CAST(b.id_servicio AS VARCHAR(64)) AS BIGINT) = CAST(@svcService AS BIGINT)
+    )
+  )
 ORDER BY b.idbillete ASC;
 
 
@@ -90,6 +106,10 @@ ORDER BY b.idbillete ASC;
 
 @Injectable()
 export class TicketingSqlServerAdapter implements TicketingAdapter {
+  private readonly logger = new Logger(TicketingSqlServerAdapter.name);
+  private readonly debugLocatorCandidatesRaw =
+    (process.env.TICKETING_LOCATOR_DEBUG_RAW ?? '').toLowerCase() === 'true';
+
   constructor(private readonly sqlServer: TicketingSqlServerService) {}
 
   async check(locator: string, serviceId: string): Promise<TicketingCheckResult> {
@@ -118,6 +138,13 @@ export class TicketingSqlServerAdapter implements TicketingAdapter {
     dni: string;
     serviceId: string | null;
   }): Promise<TicketingLocatorCandidate[]> {
+    if (this.debugLocatorCandidatesRaw) {
+      const serviceParts = this.parseServiceIdParts(input.serviceId);
+      this.logger.debug(
+        `[LOCATOR_SQL_INPUT] locator="${input.locator}" dni="${input.dni}" serviceId="${input.serviceId ?? 'NULL'}" itinerary="${serviceParts.itinerary ?? 'NULL'}" date="${serviceParts.date ?? 'NULL'}" time="${serviceParts.time ?? 'NULL'}" service="${serviceParts.service ?? 'NULL'}"`,
+      );
+    }
+
     const rows = await this.sqlServer.query<ListLocatorCandidatesRow>(SQL_LIST_LOCATOR_CANDIDATES, {
       locator: input.locator.trim().toUpperCase(),
       dni: input.dni.trim().toUpperCase(),
@@ -132,6 +159,25 @@ export class TicketingSqlServerAdapter implements TicketingAdapter {
         ref: this.toStringOrUndefined(row.ref),
       }))
       .filter((row) => row.ticketKey.length > 0);
+  }
+
+  private parseServiceIdParts(serviceId: string | null): {
+    itinerary: string | null;
+    date: string | null;
+    time: string | null;
+    service: string | null;
+  } {
+    if (!serviceId) {
+      return { itinerary: null, date: null, time: null, service: null };
+    }
+
+    const parts = serviceId.split('_');
+    return {
+      itinerary: parts[0] || null,
+      date: parts[1] || null,
+      time: parts[2] || null,
+      service: parts[3] || null,
+    };
   }
 
   private toStringOrUndefined(value: unknown): string | undefined {

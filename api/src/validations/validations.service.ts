@@ -761,11 +761,31 @@ export class ValidationsService {
       throw new InternalServerErrorException('Ticketing adapter does not implement listLocatorCandidates');
     }
 
-    const rawCandidates = await this.ticketingAdapter.listLocatorCandidates({
-      locator: input.locator,
-      dni: input.dni,
-      serviceId: input.serviceId,
-    });
+    let rawCandidates: TicketingLocatorCandidate[];
+    try {
+      rawCandidates = await this.ticketingAdapter.listLocatorCandidates({
+        locator: input.locator,
+        dni: input.dni,
+        serviceId: input.serviceId,
+      });
+    } catch (error) {
+      this.logger.error(
+        `[validate-locator] ticketing lookup failed locator=${input.locator} serviceId=${input.serviceId ?? 'NULL'}`,
+        error as Error,
+      );
+      return this.buildFunctionalResponse(
+        await this.insertValidation(client, {
+          locator: input.locator,
+          serviceId: input.serviceId ?? '',
+          result: 'INVALID',
+          reason: 'NOT_FOUND',
+        }),
+        {
+          result: 'INVALID',
+          reason: 'NOT_FOUND',
+        },
+      );
+    }
     this.logger.log(
       `[validate-locator] locator=${input.locator} serviceId=${input.serviceId ?? 'NULL'} candidates=${rawCandidates.length}`,
     );

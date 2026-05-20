@@ -19,6 +19,11 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
   }
 
   if (allowedRoles && allowedRoles.length > 0) {
+    // Avoid transient 403 flashes while the user profile is still hydrating.
+    if (!me) {
+      return <main className="page page--centered">Cargando permisos...</main>;
+    }
+
     const roleList = me?.roles ?? me?.user?.roles ?? [];
     const allowedSet = new Set(allowedRoles.map((role) => role.toLowerCase()));
     const isAllowed = roleList.some((role) => allowedSet.has(role.toLowerCase()));

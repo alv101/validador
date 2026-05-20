@@ -3,7 +3,7 @@ import { NavLink, useNavigate } from "react-router-dom";
 
 import { useActiveService } from "@/features/service/ActiveServiceContext";
 import { listBuses, listDepartures, listItineraries } from "@/features/service/catalog/serviceCatalog";
-import { toYYYYMMDD, toYYYYMMDDWithHyphen } from "@/features/service/dateUtils";
+import { toYYYYMMDD } from "@/features/service/dateUtils";
 import type { BusOption, DepartureOption, RouteOption } from "@/types/service";
 import { BrandBar } from "@/components/BrandBar";
 
@@ -19,11 +19,15 @@ const EMPTY_CATALOG: CatalogState = {
   buses: [],
 };
 
-const WINDOW_PAST_MINUTES = 30;
-const WINDOW_FUTURE_HOURS = 1;
+const WINDOW_PAST_MINUTES = 60;
+const WINDOW_FUTURE_HOURS = 2;
 
 function sortDeparturesByTimeAsc(items: DepartureOption[]): DepartureOption[] {
-  return [...items].sort((a, b) => a.time.localeCompare(b.time));
+  return [...items].sort((a, b) => {
+    const byDate = a.date.localeCompare(b.date);
+    if (byDate !== 0) return byDate;
+    return a.time.localeCompare(b.time);
+  });
 }
 
 function parseDepartureLocalDateTime(item: DepartureOption): Date | null {
@@ -60,7 +64,6 @@ export function ServiceSelectPage() {
 
   const today = useMemo(() => new Date(), []);
   const queryDateYYYYMMDD = useMemo(() => toYYYYMMDD(today), [today]);
-  const uiDateYYYYMMDD = useMemo(() => toYYYYMMDDWithHyphen(today), [today]);
 
   const [selectedItineraryId, setSelectedItineraryId] = useState<string>("");
   const [selectedDepartureId, setSelectedDepartureId] = useState<string>("");
@@ -220,8 +223,6 @@ export function ServiceSelectPage() {
           </NavLink>
         </nav>
       </header>
-
-      <p>Fecha operativa: {uiDateYYYYMMDD} (query ticketing: {queryDateYYYYMMDD})</p>
 
       {loadingInitial ? <p>Cargando catalogo de servicio...</p> : null}
       {loadError ? <p className="text-error">{loadError}</p> : null}

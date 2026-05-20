@@ -34,18 +34,34 @@ type BusRow = {
 };
 
 const SQL_ITINERARIES = `
+DECLARE @dateBase DATETIME;
 
-SELECT DISTINCT
-  d.itinerario as itineraryId,iti_descripcion as label
-FROM (
-  SELECT itinerario
-  FROM  [192.168.33.15\\PESADB].[SAE_TAQUILLA].[dbo].[PS_WEBORIGENDESTINO]
-  WHERE fecha = cast(floor(cast(getdate() as float)) as datetime)
-    AND tipo  = 'Web'
-) AS d
-LEFT JOIN  [192.168.33.15\\PESADB].[SAE_LOCALIZA].[dbo].[cvi_itinerarios] AS i
-  ON d.itinerario = i.iti_id  
-ORDER BY iti_descripcion
+SET @dateBase = CONVERT(DATETIME, @dateYYYYMMDD, 112);
+
+WITH base AS (
+  SELECT DISTINCT
+    CAST(d.itinerario AS VARCHAR(64)) AS itineraryId,
+    COALESCE(NULLIF(LTRIM(RTRIM(i.iti_descripcion)), ''), CAST(d.itinerario AS VARCHAR(64))) AS label
+  FROM [192.168.33.15\\PESADB].[SAE_TAQUILLA].[dbo].[PS_WEBORIGENDESTINO]
+  AS d
+  LEFT JOIN [192.168.33.15\\PESADB].[SAE_LOCALIZA].[dbo].[cvi_itinerarios] AS i
+    ON d.itinerario = i.iti_id
+  WHERE d.tipo = 'Web'
+    AND (
+      d.fecha = @dateBase
+      OR (
+        CONVERT(VARCHAR(5), GETDATE(), 108) >= '23:00'
+        AND d.fecha = DATEADD(DAY, 1, @dateBase)
+        AND LEFT(CONVERT(VARCHAR(8), d.hora, 108), 5) <= '01:00'
+      )
+    )
+)
+SELECT
+  MIN(itineraryId) AS itineraryId,
+  label
+FROM base
+GROUP BY label
+ORDER BY label
 `;
 
 const SQL_DEPARTURES = `
@@ -78,6 +94,16 @@ FROM [192.168.33.15\\PESADB].[SAE_TAQUILLA].[dbo].[PS_WEBORIGENDESTINO] d
       > DATEADD(MINUTE, -15, GETDATE())
 ORDER BY time ASC
 */
+DECLARE @dateBase DATETIME;
+DECLARE @routeLabel VARCHAR(255);
+
+SET @dateBase = CONVERT(DATETIME, @dateYYYYMMDD, 112);
+SET @routeLabel = NULL;
+
+SELECT TOP 1
+  @routeLabel = NULLIF(LTRIM(RTRIM(iti_descripcion)), '')
+FROM [192.168.33.15\\PESADB].[SAE_LOCALIZA].[dbo].[cvi_itinerarios]
+WHERE CAST(iti_id AS VARCHAR(64)) = @itineraryId;
 
 WITH base AS (
     SELECT
@@ -86,15 +112,26 @@ WITH base AS (
         d.fecha,
         d.hora,
         ROW_NUMBER() OVER (
-            PARTITION BY d.servicio
+            PARTITION BY d.servicio, d.fecha, d.hora
             ORDER BY d.hora ASC
         ) AS rn
     FROM [192.168.33.15\\PESADB].[SAE_TAQUILLA].[dbo].[PS_WEBORIGENDESTINO] d
+    LEFT JOIN [192.168.33.15\\PESADB].[SAE_LOCALIZA].[dbo].[cvi_itinerarios] i
+      ON d.itinerario = i.iti_id
     WHERE
         d.tipo = 'Web'
-        AND d.itinerario =  @itineraryId
-        -- filtro por fecha SIN convertir:
-        AND d.fecha = @dateYYYYMMDD
+        AND (
+            (@routeLabel IS NULL AND CAST(d.itinerario AS VARCHAR(64)) = @itineraryId)
+            OR (@routeLabel IS NOT NULL AND i.iti_descripcion = @routeLabel)
+        )
+        AND (
+            d.fecha = @dateBase
+            OR (
+                CONVERT(VARCHAR(5), GETDATE(), 108) >= '23:00'
+                AND d.fecha = DATEADD(DAY, 1, @dateBase)
+                AND LEFT(CONVERT(VARCHAR(8), d.hora, 108), 5) <= '01:00'
+            )
+        )
 )
 SELECT
     servicio,
